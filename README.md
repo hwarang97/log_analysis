@@ -29,3 +29,56 @@
 
 횟수(>=1)인 특징을 이용해 bucket sort를 적용할수도 있지만, 공간 복잡도가 O(k)를 따르는데 O(n)보다 훨씬 큰 공간이 필요해질 수 있다. (k는 횟수중 최댓값, n은 유니크한 키 갯수)
 예를 들면, 로그에 192.0.0.1 IP에서만 10만번의 요청만 있다면, 최대값때문에 10만+ 1 만큼의 메모리가 필요해진다. 반면, O(n) 공간 복잡도라면 정렬시 공간 1개만 있으면 된다. 
+
+## 코드 내용
+
+### sample.log
+```bash
+192.168.0.1 [10/Nov/2025:14:30:01] "GET /home HTTP/1.1" 200
+10.0.0.5 [10/Nov/2025:14:30:05] "GET /products HTTP/1.1" 200
+192.168.0.1 [10/Nov/2025:14:30:10] "GET /about HTTP/1.1" 200
+10.0.0.5 [10/Nov/2025:14:30:15] "GET /products HTTP/1.1" 200
+172.16.0.10 [10/Nov/2025:14:30:20] "GET /non-existent-page HTTP/1.1" 404
+192.168.0.1 [10/Nov/2025:14:30:22] "GET /home HTTP/1.1" 200
+10.0.0.5 [10/Nov/2025:14:30:30] "GET /products HTTP/1.1" 200
+172.16.0.10 [10/Nov/2025:14:30:35] "GET /contact HTTP/1.1" 200
+192.168.0.1 [10/Nov/2025:14:30:40] "GET /home HTTP/1.1" 200
+10.0.0.5 [10/Nov/2025:14:30:41] "GET /products HTTP/1.1" 200
+203.0.113.8 [10/Nov/2025:14:31:00] "GET /about HTTP/1.1" 200
+10.0.0.5 [10/Nov/2025:14:31:02] "GET /products HTTP/1.1" 200
+192.168.0.1 [10/Nov/2025:14:31:10] "GET /contact HTTP/1.1" 404
+```
+IP, 시간, 메소드, request url, HTTP version, status_code 로 이루어져있다.
+라인별로 파싱하고, IP, Request, status_code를 카운팅한다.
+
+```python
+for line in file_log:
+  clean_line = line.strip()
+
+  fields = clean_line.split(" ")
+  ip = fields[0]
+  time = parse_time(fields[1])
+  request = fields[3]
+  status_code = fields[5]
+
+  ip_counter[ip] += 1
+  request_counter[request] += 1
+  log_time_counter[time] += 1
+  error_404_counter = (
+      error_404_counter + 1 if status_code == "404" else error_404_counter
+  )
+```
+
+```python
+sorted_ips_frequent = get_top_frequent(ip_counter)
+sorted_request_frequent = get_top_frequent(request_counter)
+sorted_log_time_frequent = get_top_frequent(log_time_counter, 1)
+
+show_frequency("ip", sorted_ips_frequent)
+show_frequency("request", sorted_request_frequent)
+show_frequency("log_time", sorted_log_time_frequent)
+```
+내부적으로 sorted를 이용해 횟수를 기준으로 내림차순 정렬시켰다. python sorted는 내부적으로 Timsort를 사용하는데, merge sort와 insertsion sort를 기반으로 만들어졌다.
+따라서 시간 복잡도는 O(nlog n)을 따른다.   
+
+마지막으로 정렬된 결과를 보기 좋게 출력해주면서 프로그램이 종료된다.
